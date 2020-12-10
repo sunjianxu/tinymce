@@ -1,7 +1,8 @@
-import { Arr, Obj, Optional } from '@ephox/katamari';
-import { SugarElement } from '@ephox/sugar';
+import { Arr, Fun, Obj, Optional, Type } from '@ephox/katamari';
+import { Attribute, SugarElement } from '@ephox/sugar';
 import * as Structs from '../api/Structs';
 import * as DetailsList from '../model/DetailsList';
+import * as TableLookup from './TableLookup';
 
 export interface Warehouse {
   readonly grid: Structs.Grid;
@@ -34,7 +35,7 @@ const filterItems = (warehouse: Warehouse, predicate: (x: Structs.DetailExt, i: 
   return Arr.filter(all, predicate);
 };
 
-const generateColumns = <T extends Structs.Detail> (rowData: Structs.RowData<T>): Record<number, Structs.ColumnExt> => {
+const generateColumns = <T extends Structs.Detail>(rowData: Structs.RowData<T>): Record<number, Structs.ColumnExt> => {
   const columnsGroup: Record<number, Structs.ColumnExt> = {};
   let index = 0;
 
@@ -58,7 +59,7 @@ const generateColumns = <T extends Structs.Detail> (rowData: Structs.RowData<T>)
  *  2. a data structure which can efficiently identify which cell is in which row,column position
  *  3. a list of all cells in order left-to-right, top-to-bottom
  */
-const generate = <T extends Structs.Detail> (list: Structs.RowData<T>[]): Warehouse => {
+const generate = <T extends Structs.Detail>(list: Structs.RowData<T>[]): Warehouse => {
   // list is an array of objects, made by cells and elements
   // elements: is the TR
   // cells: is an array of objects representing the cells in the row.
@@ -70,6 +71,15 @@ const generate = <T extends Structs.Detail> (list: Structs.RowData<T>[]): Wareho
   const cells: Structs.RowData<Structs.DetailExt>[] = [];
   let columns: Record<number, Structs.ColumnExt> = {};
 
+  // This mainly to protect against atomic tests
+  const isSugarElement = (elm: any): elm is SugarElement => Type.isObject(elm) && Obj.hasNonNullableKey(elm, 'dom');
+
+  const tableOpt = Arr.get(list, 0).filter((rowData) => isSugarElement(rowData.element)).bind((rowData) => TableLookup.table(rowData.element));
+  const lockedColumns: Record<number, true> = tableOpt.bind(
+    (table) => Attribute.getOpt(table, 'data-snooker-locked-cols').bind((lockedColStr) => Optional.from(lockedColStr.match(/\d+/g))).map((lockedColArr) => Arr.map(lockedColArr, (lockedCol) => parseInt(lockedCol, 10)))
+  ).map((lockedCols) => Arr.mapToObject(lockedCols, Fun.always))
+    .getOr({});
+
   let maxRows = 0;
   let maxColumns = 0;
   let rowCount = 0;
@@ -80,6 +90,7 @@ const generate = <T extends Structs.Detail> (list: Structs.RowData<T>[]): Wareho
     } else {
       const currentRow: Structs.DetailExt[] = [];
       Arr.each(rowData.cells, (rowCell) => {
+        const element = rowCell.element;
         let start = 0;
 
         // If this spot has been taken by a previous rowspan, skip it.
@@ -87,7 +98,10 @@ const generate = <T extends Structs.Detail> (list: Structs.RowData<T>[]): Wareho
           start++;
         }
 
-        const current = Structs.extended(rowCell.element, rowCell.rowspan, rowCell.colspan, rowCount, start);
+        // Note: isString check is so that atomic tests can pass
+        const isLocked = Type.isString(element) ? false : Obj.hasNonNullableKey(lockedColumns, start);
+
+        const current = Structs.extended(element, rowCell.rowspan, rowCell.colspan, rowCount, start, isLocked);
 
         // Occupy all the (row, column) positions that this cell spans for.
         for (let occupiedColumnPosition = 0; occupiedColumnPosition < rowCell.colspan; occupiedColumnPosition++) {

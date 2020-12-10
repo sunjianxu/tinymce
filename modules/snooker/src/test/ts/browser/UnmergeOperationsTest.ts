@@ -221,4 +221,45 @@ UnitTest.test('UnmergeOperationsTest', () => {
       }
     ]
   );
+
+  Assertions.checkUnmerge(
+    'TINY-6765 - unmerging cells that are part of a locked column should be noop',
+
+    '<table data-snooker-locked-cols="0"><tbody>' +
+      '<tr><th rowspan="3">A1</th><td>B1</td><td>C1</td><td>D1</td></tr>' +
+      '<tr><td>B2</td><td>C2</td><td>D2</td></tr>' +
+      '<tr><td>B3</td><td>C3</td><td>D3</td></tr>' +
+    '</tbody></table>',
+
+    '<table data-snooker-locked-cols="0"><tbody>' +
+      '<tr><th rowspan="3">A1</th><td>B1</td><td>C1</td><td>D1</td></tr>' +
+      '<tr><td>B2</td><td>C2</td><td>D2</td></tr>' +
+      '<tr><td>B3</td><td>C3</td><td>D3</td></tr>' +
+    '</tbody></table>',
+
+    [
+      { section: 0, row: 0, column: 0 },
+      { section: 0, row: 0, column: 1 }
+    ]
+  );
+
+  Assertions.checkUnmerge(
+    'TINY-6765 - unmerging cells with a locked column in the table but not selected should not affect unmerging',
+
+    '<table data-snooker-locked-cols="1"><tbody>' +
+      '<tr><th>A1</th><td>B1</td><td>C1</td><td>D1</td></tr>' +
+      '<tr><th>?</th><td>B2</td><td>C2</td><td>D2</td></tr>' +
+      '<tr><th>?</th><td>B3</td><td>C3</td><td>D3</td></tr>' +
+    '</tbody></table>',
+
+    '<table data-snooker-locked-cols="1"><tbody>' +
+      '<tr><th rowspan="3">A1</th><td>B1</td><td>C1</td><td>D1</td></tr>' +
+      '<tr><td>B2</td><td>C2</td><td>D2</td></tr>' +
+      '<tr><td>B3</td><td>C3</td><td>D3</td></tr>' +
+    '</tbody></table>',
+
+    [
+      { section: 0, row: 0, column: 0 }
+    ]
+  );
 });

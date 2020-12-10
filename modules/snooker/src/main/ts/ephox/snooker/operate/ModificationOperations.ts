@@ -75,16 +75,13 @@ const splitCellIntoRows = (grid: Structs.RowCells[], exampleRow: number, example
   return cols.concat(before).concat([ between ]).concat(after);
 };
 
-const deleteColumnsAt = (grid: Structs.RowCells[], start: number, finish: number): Structs.RowCells[] => {
-  const rows = Arr.map(grid, (row) => {
-    const cells = row.cells.slice(0, start).concat(row.cells.slice(finish + 1));
-    return Structs.rowcells(cells, row.section);
+const deleteColumnsAt = (grid: Structs.RowCells[], columns: number[]): Structs.RowCells[] =>
+  Arr.bind(grid, (row) => {
+    const existingCells = row.cells;
+    const sorted = Arr.sort(columns);
+    const cells = Arr.foldr(sorted, (acc, column) => column >= 0 && column < acc.length ? acc.slice(0, column).concat(acc.slice(column + 1)) : acc, existingCells);
+    return cells.length > 0 ? [ Structs.rowcells(cells, row.section) ] : [];
   });
-  // We should filter out rows that have no columns for easy deletion
-  return Arr.filter(rows, (row) => {
-    return row.cells.length > 0;
-  });
-};
 
 const deleteRowsAt = (grid: Structs.RowCells[], start: number, finish: number): Structs.RowCells[] => {
   const { rows, cols } = GridRow.extractGridDetails(grid);

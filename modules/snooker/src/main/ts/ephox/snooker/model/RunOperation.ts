@@ -169,5 +169,14 @@ const onCells = (warehouse: Warehouse, target: TargetSelection): Optional<Detail
   return cells.length > 0 ? Optional.some(cells) : Optional.none();
 };
 
-export { run, toDetailList, onCell, onCells, onPaste, onPasteByEditor, onMergable, onUnmergable };
+export {
+  run,
+  toDetailList,
+  onCell,
+  onCells,
+  onPaste,
+  onPasteByEditor,
+  onMergable,
+  onUnmergable
+};
 

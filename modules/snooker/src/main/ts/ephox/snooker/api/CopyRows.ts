@@ -1,5 +1,5 @@
-import { Optional } from '@ephox/katamari';
-import { SugarElement } from '@ephox/sugar';
+import { Arr, Optional, Optionals } from '@ephox/katamari';
+import { Compare, SugarElement } from '@ephox/sugar';
 import * as GridRow from '../model/GridRow';
 import { onCells, TargetSelection, toDetailList } from '../model/RunOperation';
 import * as Transitions from '../model/Transitions';
@@ -9,15 +9,22 @@ import { Warehouse } from './Warehouse';
 
 const copyRows = (table: SugarElement<HTMLTableElement>, target: TargetSelection, generators: Generators): Optional<SugarElement<HTMLTableRowElement>[]> => {
   const warehouse = Warehouse.fromTable(table);
+  // Cannot use onUnlockedCells like extractor here as if only cells in a locked column are selected, then this will be Optional.none and there is now way of knowing which rows are selected
+  // Need to get the rows first, then filter out the locked cells from the rows
   const details = onCells(warehouse, target);
 
-  return details.map((selectedCells) => {
+  return details.bind((selectedCells) => {
     const grid = Transitions.toGrid(warehouse, generators, false);
     const rows = GridRow.extractGridDetails(grid).rows;
     const slicedGrid = rows.slice(selectedCells[0].row, selectedCells[selectedCells.length - 1].row + selectedCells[selectedCells.length - 1].rowspan);
-    const slicedDetails = toDetailList(slicedGrid, generators);
-    return Redraw.copy(slicedDetails);
-  });
+    // Remove any locked cells from the copied grid rows
+    const filteredGrid = Arr.bind(slicedGrid, (row) => {
+      const newCells = Arr.filter(row.cells, (cell) => Warehouse.findItem(warehouse, cell.element, Compare.eq).forall((detail) => !detail.isLocked));
+      return newCells.length > 0 ? [{ ...row, cells: newCells }] : [];
+    });
+    const slicedDetails = toDetailList(filteredGrid, generators);
+    return Optionals.someIf(slicedDetails.length > 0, slicedDetails);
+  }).map((slicedDetails) => Redraw.copy(slicedDetails));
 };
 
 export {

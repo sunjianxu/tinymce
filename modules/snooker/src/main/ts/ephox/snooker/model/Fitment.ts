@@ -1,4 +1,5 @@
-import { Arr, Fun, Result } from '@ephox/katamari';
+import { Arr, Fun, Result, Type } from '@ephox/katamari';
+import { SugarElement } from '@ephox/sugar';
 import { SimpleGenerators } from '../api/Generators';
 import * as Structs from '../api/Structs';
 import * as GridRow from './GridRow';
@@ -58,28 +59,39 @@ const measureHeight = (gridA: Structs.RowCells[], gridB: Structs.RowCells[]): De
   };
 };
 
-const generateElements = <T> (cells: T[], row: Structs.RowCells, generators: SimpleGenerators) => {
-  const getGenerator = row.section === 'colgroup' ? generators.col : generators.cell;
-  return Arr.map(cells, () => Structs.elementnew(getGenerator(), true));
+const getGenerator = (row: Structs.RowCells, generators: SimpleGenerators) => row.section === 'colgroup' ? generators.col : generators.cell;
+
+const generateElements = (amount: number, generator: () => SugarElement): Structs.ElementNew[] => {
+  return Arr.range(amount, () => Structs.elementnew(generator(), true));
 };
 
 const rowFill = (grid: Structs.RowCells[], amount: number, generators: SimpleGenerators): Structs.RowCells[] =>
   grid.concat(Arr.range(amount, () => {
     const row = grid[grid.length - 1];
-    return GridRow.setCells(row, generateElements(row.cells, row, generators));
+    const elements = generateElements(row.cells.length, getGenerator(row, generators));
+    return GridRow.setCells(row, elements);
   }));
 
 const colFill = (grid: Structs.RowCells[], amount: number, generators: SimpleGenerators): Structs.RowCells[] =>
   Arr.map(grid, (row) => {
-    const newChildren = generateElements(Arr.range(amount, Fun.identity), row, generators);
+    const newChildren = generateElements(amount, getGenerator(row, generators));
     return GridRow.setCells(row, row.cells.concat(newChildren));
   });
 
-const tailor = (gridA: Structs.RowCells[], delta: Delta, generators: SimpleGenerators): Structs.RowCells[] => {
+const lockedColFill = (grid: Structs.RowCells[], generators: SimpleGenerators, lockedColumns: number[]): Structs.RowCells[] =>
+  Arr.map(grid, (row) => {
+    const generator = getGenerator(row, generators);
+    return Arr.foldl(lockedColumns, (acc, colNum) => {
+      const newChild = Structs.elementnew(generator(), true);
+      return GridRow.addCell(acc, colNum, newChild);
+    }, row);
+  });
+
+const tailor = (gridA: Structs.RowCells[], delta: Delta, generators: SimpleGenerators, lockedColumns?: number[]): Structs.RowCells[] => {
   const fillCols = delta.colDelta < 0 ? colFill : Fun.identity;
   const fillRows = delta.rowDelta < 0 ? rowFill : Fun.identity;
-
-  const modifiedCols = fillCols(gridA, Math.abs(delta.colDelta), generators);
+  const cols = Type.isNonNullable(lockedColumns) && lockedColumns.length > 0 ? lockedColFill(gridA, generators, lockedColumns) : gridA;
+  const modifiedCols = fillCols(cols, Math.abs(delta.colDelta), generators);
   return fillRows(modifiedCols, Math.abs(delta.rowDelta), generators);
 };
 

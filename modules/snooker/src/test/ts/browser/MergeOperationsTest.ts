@@ -231,4 +231,48 @@ UnitTest.test('MergeOperationsTest', () => {
     ],
     { startRow: 0, startCol: 0, finishRow: 1, finishCol: 0 }
   );
+
+  Assertions.checkMerge(
+    'TINY-6765 - merging cells that are part of a locked column should be noop',
+
+    '<table style="border-collapse: collapse;" data-snooker-locked-cols="0"><tbody>' +
+      '<tr><td>a</td><td>b</td><td>c</td></tr>' +
+      '<tr><td>d</td><td>e</td><td>f</td></tr>' +
+      '<tr><td>g</td><td>h</td><td>i</td></tr>' +
+    '</tbody></table>',
+
+    '<table border="1" style="border-collapse: collapse;" data-snooker-locked-cols="0"><tbody>' +
+      '<tr><td>a</td><td>b</td><td>c</td></tr>' +
+      '<tr><td>d</td><td>e</td><td>f</td></tr>' +
+      '<tr><td>g</td><td>h</td><td>i</td></tr>' +
+    '</tbody></table>',
+
+    [
+      { section: 0, row: 0, column: 0 },
+      { section: 0, row: 1, column: 0 }
+    ],
+    { startRow: 0, startCol: 0, finishRow: 1, finishCol: 0 }
+  );
+
+  Assertions.checkMerge(
+    'TINY-6765 - merging cells with a locked column in the table but not selected should not affect merging',
+
+    '<table style="border-collapse: collapse;" data-snooker-locked-cols="2"><tbody>' +
+      '<tr><td rowspan="2">a<br>d<br></td><td>b</td><td>c</td></tr>' +
+      '<tr><td>e</td><td>f</td></tr>' +
+      '<tr><td>g</td><td>h</td><td>i</td></tr>' +
+    '</tbody></table>',
+
+    '<table border="1" style="border-collapse: collapse;" data-snooker-locked-cols="2"><tbody>' +
+      '<tr><td>a</td><td>b</td><td>c</td></tr>' +
+      '<tr><td>d</td><td>e</td><td>f</td></tr>' +
+      '<tr><td>g</td><td>h</td><td>i</td></tr>' +
+    '</tbody></table>',
+
+    [
+      { section: 0, row: 0, column: 0 },
+      { section: 0, row: 1, column: 0 }
+    ],
+    { startRow: 0, startCol: 0, finishRow: 1, finishCol: 0 }
+  );
 });

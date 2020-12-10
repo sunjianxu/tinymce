@@ -1,5 +1,5 @@
 import { Arr, Fun, Optional } from '@ephox/katamari';
-import { RunOperation, Structs } from '@ephox/snooker';
+import { RunOperation } from '@ephox/snooker';
 import { Attribute, SugarElement } from '@ephox/sugar';
 import { Ephemera } from '../api/Ephemera';
 import * as TableSelection from '../api/TableSelection';
@@ -16,7 +16,7 @@ const selection = (selections: Selections): SugarElement[] =>
 
 const unmergable = (selections: Selections): Optional<SugarElement[]> => {
   const hasSpan = (elem: SugarElement<Element>, type: 'colspan' | 'rowspan') => Attribute.getOpt(elem, type).exists((span) => parseInt(span, 10) > 1);
-  const hasRowOrColSpan = (elem: SugarElement<Element>) => hasSpan(elem, 'rowspan') || hasSpan(elem, 'colspan');
+  const hasRowOrColSpan = (elem: SugarElement<Element>) => Attribute.get(elem, 'contenteditable') !== 'false' && hasSpan(elem, 'rowspan') || hasSpan(elem, 'colspan');
 
   const candidates = selection(selections);
 
@@ -27,11 +27,13 @@ const mergable = (table: SugarElement<HTMLTableElement>, selections: Selections,
   SelectionTypes.cata<Optional<RunOperation.ExtractMergable>>(selections.get(),
     Optional.none,
     (cells: SugarElement<Element>[]) => {
-      if (cells.length <= 1) {
+      // TODO: Revert this
+      const allEditable = Arr.forall(cells, (cell) => Attribute.get(cell, 'contenteditable') !== 'false');
+      if (cells.length <= 1 || !allEditable) {
         return Optional.none();
       } else {
         return TableSelection.retrieveBox(table, ephemera.firstSelectedSelector, ephemera.lastSelectedSelector)
-          .map((bounds: Structs.Bounds) => ({ bounds, cells }));
+          .map((bounds) => ({ bounds, cells }));
       }
     },
     Optional.none
