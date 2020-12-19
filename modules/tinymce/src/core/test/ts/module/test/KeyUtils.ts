@@ -1,4 +1,6 @@
-const charCodeToKeyCode = (charCode) => {
+import Editor from 'tinymce/core/api/Editor';
+
+const charCodeToKeyCode = (charCode: number) => {
   const lookup = {
     '0': 48, '1': 49, '2': 50, '3': 51, '4': 52, '5': 53, '6': 54, '7': 55, '8': 56, '9': 57, 'a': 65, 'b': 66, 'c': 67,
     'd': 68, 'e': 69, 'f': 70, 'g': 71, 'h': 72, 'i': 73, 'j': 74, 'k': 75, 'l': 76, 'm': 77, 'n': 78, 'o': 79, 'p': 80, 'q': 81,
@@ -9,7 +11,7 @@ const charCodeToKeyCode = (charCode) => {
   return lookup[String.fromCharCode(charCode)];
 };
 
-const type = (editor, chr) => {
+const type = (editor: Editor, chr: string | number | Record<string, number | string | boolean>) => {
   let keyCode, charCode, evt, rng, offset;
 
   const fakeEvent = (target, type, evt) => {
@@ -52,8 +54,9 @@ const type = (editor, chr) => {
 
   if (!evt.isDefaultPrevented()) {
     if (keyCode === 8) {
-      if (editor.getDoc().selection) {
-        rng = editor.getDoc().selection.createRange();
+      const selection: any = (editor.getDoc() as any).selection;
+      if (selection) {
+        rng = selection.createRange();
 
         if (rng.text.length === 0) {
           rng.moveStart('character', -1);
